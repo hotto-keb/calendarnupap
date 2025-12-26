@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracker</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background-color: white;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+.container {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 10px;
+  transform-origin: top center;
+}
+h1 { color: #0056b3; }
+.stats { margin-top: 20px; }
+.calendar-container { margin-top: 20px; }
+.year-navigation { margin-bottom: 15px; }
+.year-nav-button {
+  cursor: pointer;
+  margin: 0 10px;
+  padding: 5px 10px;
+  background-color: #0056b3;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+.year-month {
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  aspect-ratio: 1 / 1.2;
+}
+.month-label { font-weight: bold; text-align: center; }
+.weekdays, .month-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.calendar-day {
+  padding: 3px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  text-align: center;
+  position: relative;
+}
+.calendar-day.shaded {
+  background-color: #90ee90;
+  color: black;
+  background-clip: padding-box;
+}
+.calendar-day.empty { background-color: transparent; border: none; }
+.weekdays div { font-weight: bold; text-align: center; }
+
+#dayPopup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  display: none;
+  z-index: 1000;
+  width: 90%;
+  max-width: 400px;
+  box-sizing: border-box;
+}
+#dayPopup button { margin-top: 10px; }
+
+.stats-card {
+  margin: 25px auto;
+  padding: 20px;
+  max-width: 350px;
+  background: #ffffff;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: left;
+}
+.stats-card h2 {
+  margin-top: 0;
+  font-size: 20px;
+  text-align: center;
+  color: #0056b3;
+}
+.stats-card .row {
+  margin: 8px 0;
+  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+}
+.stats-card .label { font-weight: bold; color: #333; }
+.stats-card .value { color: #444; }
+#day-decimal, #day-total { color: #777; font-size:0.85em; }
+
+@media (max-width: 1100px) { .container { transform: scale(0.95); } }
+@media (max-width: 900px)  { .container { transform: scale(0.85); } }
+@media (max-width: 750px)  { .container { transform: scale(0.75); } }
+@media (max-width: 650px)  { .container { transform: scale(0.67); } }
+@media (max-width: 550px)  { .container { transform: scale(0.60); } }
+@media (max-width: 480px)  { .container { transform: scale(0.53); } }
+@media (max-width: 420px)  { .container { transform: scale(0.48); } }
+@media (max-width: 360px)  { .container { transform: scale(0.43); } }
+
+</style>
+</head>
+
+<body>
+
+<div class="stats-card">
+<h2>Quick Stats</h2>
+<div class="row">
+  <div class="label">Current Time:</div>
+  <div class="value" id="card-current-time">--</div>
+</div>
+<div class="row">
+  <div class="label">Days Passed:</div>
+  <div class="value" id="card-days-decimal">
+    <span id="day-integer">0</span><span id="day-decimal">.00000</span><span id="day-total">/86400</span>
+  </div>
+</div>
+<div class="row">
+  <div class="label">Total Hours:</div>
+  <div class="value" id="card-total-hours">--</div>
+</div>
+<div class="row">
+  <div class="label">Total Seconds:</div>
+  <div class="value" id="card-total-seconds">--</div>
+</div>
+</div>
+
+<div class="container">
+<h1>NF</h1>
+
+<div class="timer">
+  <p><strong>Started:</strong> <span id="start-time"></span></p>
+  <p><strong>Current Time:</strong> <span id="current-time"></span></p>
+  <p><strong>Time Since Last:</strong> <span id="count-up-timer"></span></p>
+</div>
+
+<div class="stats">
+  <p><strong>Total Hours:</strong> <span id="hours-since">0</span></p>
+  <p><strong>Total Minutes:</strong> <span id="minutes-since">0</span></p>
+  <p><strong>Total Days:</strong> <span id="days-since">0</span></p>
+  <p><strong>Total Weeks:</strong> <span id="weeks-since">0</span></p>
+  <p><strong>Total Months:</strong> <span id="months-since">0</span></p>
+  <p><strong>Total Years:</strong> <span id="years-since">0</span></p>
+  <p><strong>Total Seconds:</strong> <span id="seconds-since">0</span></p>
+  <p><strong>Current Streak Day:</strong> <span id="streak-day">1</span></p>
+  <p><strong>Current Week and Day:</strong> <span id="week-day-label">Week 1, Day 1</span></p>
+  <p><strong>Current Month:</strong> <span id="relative-month">1</span></p>
+  <p><strong>Days Until Next Month:</strong> <span id="days-to-next-month"></span></p>
+  <p><strong>Seconds Until Next Day:</strong> <span id="seconds-to-next-day"></span></p>
+  <p><strong>Day of the Year:</strong> <span id="day-of-year"></span></p>
+
+  <button onclick="copyStats()" class="year-nav-button">Copy Stats</button>
+  <button onclick="copyStatsFormatted()" class="year-nav-button">Copy Stats 2</button>
+  <button onclick="copyAllNotes()">Copy All Notes</button>
+</div>
+
+<div class="year-navigation">
+  <button class="year-nav-button" onclick="changeYear(-1)">&#8592; Previous Year</button>
+  <span id="currentYearLabel"></span>
+  <button class="year-nav-button" onclick="changeYear(1)">Next Year &#8594;</button>
+</div>
+
+<div class="calendar-container">
+  <div class="year-grid" id="yearGrid"></div>
+</div>
+</div>
+
+<div id="dayPopup">
+  <div id="popupContent"></div>
+  <textarea id="dayNote10" rows="10" cols="50"></textarea>
+  <br><br>
+  <button onclick="navigatePopupDate(-1)">← Previous</button>
+  <button onclick="navigatePopupDate(1)">Next →</button>
+  <br><br>
+  <button onclick="saveNote()">Save Note</button>
+  <button onclick="closePopup()">Close</button>
+</div>
+
+<script>
+const STORAGE_PREFIX = "NNNdecmbevgr_11";
+
+const startDate = new Date("December 26, 2025 12:00 AM").getTime();
+const stopDate = Infinity;
+let currentYear = new Date().getFullYear();
+let selectedDate = null;
+let selectedDateKey = '';
+
+function formatDateKey(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const d = String(dateObj.getDate()).padStart(2, '0');
+  return STORAGE_PREFIX + `${y}-${m}-${d}`;
+}
+
+const startDateObj = new Date(startDate);
+document.getElementById('start-time').textContent =
+  `${startDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}, ${startDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+function updateTracker() {
+  const now = new Date();
+  const nowTime = now.getTime();
+  const effectiveNow = Math.min(nowTime, stopDate);
+  const diff = effectiveNow - startDate;
+
+  const totalSeconds = Math.floor(diff / 1000);
+  const totalMinutes = Math.floor(diff / (1000 * 60));
+  const totalHours = Math.floor(diff / (1000 * 60 * 60));
+  const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const totalWeeks = Math.floor(totalDays / 7);
+  const totalMonths = Math.floor(totalDays / 30);
+  const totalYears = Math.floor(totalDays / 365);
+
+  const secondsToday = totalSeconds % 86400;
+  const secondsThisHour = totalSeconds % 3600;
+  
+  document.getElementById("day-integer").textContent = totalDays;
+  document.getElementById("day-decimal").textContent = "." + String(secondsToday).padStart(5, '0');
+  document.getElementById("day-total").textContent = "/86400";
+
+  document.getElementById("card-current-time").textContent =
+    now.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+document.getElementById("card-total-hours").textContent = `${totalHours}.${String(secondsThisHour).padStart(4,"0")}/3600`;
+  document.getElementById("card-total-seconds").textContent = totalSeconds.toLocaleString();
+
+  // Update standard stats
+  document.getElementById('hours-since').textContent = totalHours;
+  document.getElementById('minutes-since').textContent = totalMinutes;
+  document.getElementById('days-since').textContent = totalDays;
+  document.getElementById('weeks-since').textContent = totalWeeks;
+  document.getElementById('months-since').textContent = totalMonths;
+  document.getElementById('years-since').textContent = totalYears;
+  document.getElementById('seconds-since').textContent = totalSeconds;
+
+  const streakDays = Math.floor((effectiveNow - new Date(startDate).setHours(0,0,0,0)) / 86400000) + 1;
+  document.getElementById('streak-day').textContent = streakDays;
+  document.getElementById('week-day-label').textContent =
+    `Week ${Math.floor((streakDays-1)/7)+1}, Day ${(streakDays-1)%7+1}`;
+
+  const tomorrow = new Date();
+  tomorrow.setHours(24,0,0,0);
+  document.getElementById('seconds-to-next-day').textContent = Math.floor((tomorrow-now)/1000);
+
+  const startOfYear = new Date(now.getFullYear(),0,0);
+  const dayOfYear = Math.floor((now-startOfYear)/(1000*60*60*24));
+  const totalDaysInYear = ((now.getFullYear()%4===0 && (now.getFullYear()%100!==0 || now.getFullYear()%400===0))?366:365);
+  document.getElementById('day-of-year').textContent = `${dayOfYear}/${totalDaysInYear}`;
+
+  document.getElementById('current-time').textContent =
+    now.toLocaleString(undefined, { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
+
+  // Days until next month
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth()+1, 1);
+  const oneDay = 1000*60*60*24;
+  document.getElementById('days-to-next-month').textContent =
+    now < startDateObj ? 'N/A' : Math.ceil((nextMonthStart-now)/oneDay);
+}
+
+function changeYear(offset) {
+  currentYear += offset;
+  document.getElementById("currentYearLabel").innerText = currentYear;
+  renderYearView();
+}
+
+function renderYearView() {
+  const yearGrid = document.getElementById("yearGrid");
+  yearGrid.innerHTML = "";
+
+  for(let monthIndex=0; monthIndex<12; monthIndex++){
+    const monthDiv = document.createElement("div");
+    monthDiv.className="year-month";
+
+    const monthLabel = document.createElement("div");
+    monthLabel.className="month-label";
+    monthLabel.innerText = new Date(currentYear,monthIndex).toLocaleString("default",{month:"long"});
+    monthDiv.appendChild(monthLabel);
+
+    const weekdaysDiv = document.createElement("div");
+    weekdaysDiv.className="weekdays";
+    ["M","T","W","T","F","S","S"].forEach(d=>{
+      const dayDiv = document.createElement("div");
+      dayDiv.innerText=d;
+      weekdaysDiv.appendChild(dayDiv);
+    });
+    monthDiv.appendChild(weekdaysDiv);
+
+    const monthDays = document.createElement("div");
+    monthDays.className="month-days";
+    const daysInMonth = new Date(currentYear,monthIndex+1,0).getDate();
+    const firstDay = new Date(currentYear,monthIndex,1).getDay();
+    const startOffset = firstDay===0?6:firstDay-1;
+
+    for(let i=0;i<startOffset;i++){
+      const emptyDiv=document.createElement("div");
+      emptyDiv.className="calendar-day empty";
+      monthDays.appendChild(emptyDiv);
+    }
+
+    for(let day=1;day<=daysInMonth;day++){
+      const dayDiv=document.createElement("div");
+      dayDiv.className="calendar-day";
+      dayDiv.innerText=day;
+
+      const clickedDate = new Date(currentYear,monthIndex,day);
+      dayDiv.onclick = ()=>openPopup(clickedDate);
+
+      const currentDate = new Date(currentYear,monthIndex,day).getTime();
+      const startOfStreak = new Date(startDate).setHours(0,0,0,0);
+      const today = new Date().setHours(0,0,0,0);
+      const effectiveToday = Math.min(today, stopDate);
+
+      if(currentDate>=startOfStreak && currentDate<=effectiveToday){
+        dayDiv.classList.add("shaded");
+      }
+      if(currentDate===today) dayDiv.style.border="2px solid #0056b3";
+
+      const dateKey=formatDateKey(new Date(currentYear,monthIndex,day));
+      if(localStorage.getItem(dateKey)){
+        const noteMarker=document.createElement("div");
+        noteMarker.style.width="6px";
+        noteMarker.style.height="6px";
+        noteMarker.style.borderRadius="50%";
+        noteMarker.style.background="red";
+        noteMarker.style.margin="2px auto 0";
+        dayDiv.appendChild(noteMarker);
+      }
+
+      monthDays.appendChild(dayDiv);
+    }
+    monthDiv.appendChild(monthDays);
+    yearGrid.appendChild(monthDiv);
+  }
+}
+
+function openPopup(dateObj){
+  selectedDate = new Date(dateObj);
+  selectedDateKey=formatDateKey(selectedDate);
+
+  const options={year:"numeric",month:"long",day:"numeric",weekday:"short"};
+  const formattedDate = selectedDate.toLocaleDateString(undefined,options);
+
+  const startMidnight = new Date(startDateObj.getFullYear(),startDateObj.getMonth(),startDateObj.getDate());
+  const selectedMidnight = new Date(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate());
+  let dayCount = Math.floor((selectedMidnight-startMidnight)/86400000)+1;
+  if(dayCount<1) dayCount=1;
+  const week = Math.floor((dayCount-1)/7)+1;
+  const dayOfWeek = ((dayCount-1)%7)+1;
+
+  document.getElementById("popupContent").innerHTML = `${formattedDate}<br>Day ${dayCount}<br>Week ${week} Day ${dayOfWeek}`;
+  document.getElementById("dayNote10").value = localStorage.getItem(selectedDateKey)||"";
+  document.getElementById("dayPopup").style.display="block";
+}
+
+function saveNote(close=true){
+  const note=document.getElementById("dayNote10").value.trim();
+  if(note) localStorage.setItem(selectedDateKey,note);
+  else localStorage.removeItem(selectedDateKey);
+  if(close) document.getElementById("dayPopup").style.display="none";
+  renderYearView();
+}
+
+function closePopup(){ saveNote(true); }
+
+function navigatePopupDate(offset){
+  if(!selectedDate){ alert("Open a date first!"); return; }
+  saveNote(false);
+  selectedDate.setDate(selectedDate.getDate()+offset);
+  openPopup(selectedDate);
+}
+
+function copyStats(){
+  const text=`Time Since Last: ${document.getElementById('count-up-timer').textContent}\nTotal Seconds: ${document.getElementById('seconds-since').textContent}`;
+  navigator.clipboard.writeText(text).then(()=>alert("Stats copied!"));
+}
+
+function copyStatsFormatted(){
+  const now=new Date();
+  const options={year:"numeric",month:"long",day:"numeric",weekday:"short",hour:"numeric",minute:"2-digit",hour12:true};
+  const formattedDate=now.toLocaleString(undefined,options).replace(',','');
+  const start=new Date(startDate);
+  const diff=Math.floor((now.setHours(0,0,0,0)-start.setHours(0,0,0,0))/86400000)+1;
+  const week=Math.floor((diff-1)/7)+1;
+  const dayOfWeek=((diff-1)%7)+1;
+  const text=`${formattedDate}\nDay ${diff}\nWeek ${week} Day ${dayOfWeek}`;
+  navigator.clipboard.writeText(text).then(()=>alert("Copied!"));
+}
+
+function copyAllNotes(){
+  let notesText="";
+  Object.keys(localStorage).filter(k=>k.startsWith(STORAGE_PREFIX)).sort().forEach(k=>{
+    const dateStr=k.replace(STORAGE_PREFIX,"");
+    const [y,m,d]=dateStr.split("-").map(Number);
+    const dateObj=new Date(y,m-1,d);
+    const formattedDate=dateObj.toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+    notesText+=`${formattedDate}\n${localStorage.getItem(k)||""}\n\n----------------------------\n\n`;
+  });
+  if(!notesText.trim()){ alert("No notes found."); return; }
+  navigator.clipboard.writeText(notesText).then(()=>alert("All notes copied!"));
+}
+
+setInterval(updateTracker,1000);
+updateTracker();
+changeYear(0);
+</script>
+
+</body>
+</html>
